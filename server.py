@@ -3,14 +3,45 @@ from flask_restful import Resource, Api
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from utils.mongo_json_encoder import JSONEncoder
-from authentication import requires_auth, bcrypt, BCRYPT_ROUNDS
-
+import bcrypt
+from functools import wraps
 
 # Basic Setup
 app = Flask(__name__)
 mongo = MongoClient('localhost', 27017)
 app.db = mongo.develop_database
 api = Api(app)
+BCRYPT_ROUNDS = 12
+
+
+def check_auth(username, password):
+    if username is None or password is None:
+        return False
+    else:
+        #  Get user from database
+        myuser_collection = app.db.myusers
+        my_user = myuser_collection.find_one({"username": username})
+        if my_user is None:
+            return False
+        password = my_user['password']
+        password = str.encode(password)
+        hashed = bcrypt.hashpw(password, bcrypt.gensalt(BCRYPT_ROUNDS))
+
+        return bcrypt.hashpw(password, hashed) == hashed
+
+
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        print("Check auth: " + str(auth))
+        if not auth or not check_auth(auth.username, auth.password):
+            message = {'error': 'Basic Auth Required.'}
+            resp = jsonify(message)
+            resp.status_code = 401
+            return resp
+        return f(*args, **kwargs)
+    return decorated
 
 
 class User(Resource):
@@ -21,31 +52,39 @@ class User(Resource):
             response.status_code = 404
             return response
         else:
-            myuser_collection = app.db.myobjects
+            myuser_collection = app.db.myusers
             my_user = myuser_collection.find_one({"_id": ObjectId(user_id)})
-            print("Got User")
-            print(my_user)
+
             return my_user
 
     def post(self):
         new_user = request.json
         password = new_user['password'].encode('utf-8')
-
         hashed = bcrypt.hashpw(password, bcrypt.gensalt(BCRYPT_ROUNDS)).decode('utf-8')
-
         new_user['password'] = hashed
-        # print("Post User")
-        # print(new_user)
 
-        myuser_collection = app.db.myobjects
-        result = myuser_collection.insert_one(new_user)
-
-        myuser = myuser_collection.find_one({
-            "_id": ObjectId(result.inserted_id)
+        # Check for existing user
+        existing_user = app.db.myusers.find_one({
+            "username": new_user["username"]
         })
-        # print("After got")
-        # print(myuser)
-        return myuser
+
+        print("Existing User: " + str(existing_user))
+
+        if existing_user:
+            message = {"error": "User already exists"}
+            response = jsonify(message)
+            response.status_code = 401
+            # print(response)
+            return response
+        else:
+            myuser_collection = app.db.myusers
+            result = myuser_collection.insert_one(new_user)
+
+            myuser = myuser_collection.find_one({
+                "_id": ObjectId(result.inserted_id)
+            })
+
+            return myuser
 
 
 class Trip(Resource):
@@ -80,8 +119,8 @@ api.add_resource(
 
 api.add_resource(
     User,
-    '/myuser/',
-    '/myuser/<string:user_id>/'
+    '/myusers/',
+    '/myusers/<string:user_id>'
 )
 
 
