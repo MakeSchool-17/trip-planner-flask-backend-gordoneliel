@@ -23,11 +23,12 @@ def check_auth(username, password):
         my_user = myuser_collection.find_one({"username": username})
         if my_user is None:
             return False
-        password = my_user['password']
+        db_password = my_user['password']
         password = str.encode(password)
-        hashed = bcrypt.hashpw(password, bcrypt.gensalt(BCRYPT_ROUNDS))
-
-        return bcrypt.hashpw(password, hashed) == hashed
+        db_password = str.encode(db_password)
+        # hashed = bcrypt.hashpw(password, bcrypt.gensalt(BCRYPT_ROUNDS))
+        # print(hashed, db_password)
+        return bcrypt.hashpw(password, db_password) == db_password
 
 
 def requires_auth(f):
@@ -110,6 +111,20 @@ class Trip(Resource):
 
         return mytrip
 
+    def put(self, trip_id=None):
+        if trip_id is None:
+            response = jsonify(data=[])
+            response.status_code = 404
+            return response
+        else:
+
+            new_trip = request.json
+
+            # Find a trip and modify it
+            trip_collection = app.db.myobjects
+            my_trip = trip_collection.update_one({"_id": ObjectId(trip_id)})
+
+            return my_trip
 
 api.add_resource(
     Trip,
