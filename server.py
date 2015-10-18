@@ -5,10 +5,12 @@ from bson.objectid import ObjectId
 from utils.mongo_json_encoder import JSONEncoder
 import bcrypt
 from functools import wraps
+import os
 
 # Basic Setup
 app = Flask(__name__)
-mongo = MongoClient('localhost', 27017)
+MONGO_URL = os.environ.get('MONGOHQ_URL')
+mongo = MongoClient(MONGO_URL)
 app.db = mongo.develop_database
 app.db = mongo.app42721996
 api = Api(app)
