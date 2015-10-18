@@ -10,6 +10,7 @@ from functools import wraps
 app = Flask(__name__)
 mongo = MongoClient('localhost', 27017)
 app.db = mongo.develop_database
+app.db = mongo.app42721996
 api = Api(app)
 BCRYPT_ROUNDS = 12
 
