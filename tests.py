@@ -22,6 +22,9 @@ class FlaskrTestCase(unittest.TestCase):
         db.drop_collection('mytrips')
 
     def test_posting_trip(self):
+        # [Ben-G] Posting a trip should require user authentication
+        # You should also avoid using possesive determiners in variable names, routes, etc.
+        # '/trips/' is better than '/mytrips/'
         response = self.app.post('/mytrips/', data=json.dumps(dict(
             name="A Trip"
         )),
@@ -45,6 +48,12 @@ class FlaskrTestCase(unittest.TestCase):
         loginPostResponseJSON = json.loads(user_response.data.decode())
         user_id = loginPostResponseJSON['_id']
 
+        # [Ben-G] The association with a user should happen by passing an 
+        # Base64 encoded authorization header that contains username and password.
+        # You should do that instead of passing a username as part of the JSON.
+        # The backend should also be able to verify your password, so you need 
+        # to pass it along here.
+        
         #  Post a trip and associate it with a user
         response = self.app.post('/mytrips/', data=json.dumps(dict(
             name="A Trip", username=data['username'], id=user_id
@@ -55,6 +64,8 @@ class FlaskrTestCase(unittest.TestCase):
         postResponseJSON = json.loads(response.data.decode())
         postedObjectID = postResponseJSON["_id"]
 
+        # [Ben-G] Since these are all headers, not only 'auth headers' I would
+        # reather name this dictionary 'headers'
         auth_header = {}
         auth_header['Authorization'] = 'Basic ' + base64.b64encode(
             (data['username'] + ':' + data['password']).encode('utf-8')
@@ -102,6 +113,8 @@ class FlaskrTestCase(unittest.TestCase):
         loginPostResponseJSON = json.loads(response.data.decode())
         postedUserId = loginPostResponseJSON["_id"]
 
+        # [Ben-G] Since these are all headers, not only 'auth headers' I would
+        # reather name this dictionary 'headers'
         auth_header = {}
         auth_header['Authorization'] = 'Basic ' + base64.b64encode(
             (data['username'] + ':' + data['password']).encode('utf-8')
@@ -127,6 +140,8 @@ class FlaskrTestCase(unittest.TestCase):
         loginPostResponseJSON = json.loads(response.data.decode())
         postedUserId = loginPostResponseJSON["_id"]
 
+        # [Ben-G] Since these are all headers, not only 'auth headers' I would
+        # reather name this dictionary 'headers'
         auth_header = {}
         auth_header['Authorization'] = 'Basic ' + base64.b64encode(
             (data['username'] + ':' + data['password']).encode('utf-8')
