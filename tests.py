@@ -110,7 +110,7 @@ class FlaskrTestCase(unittest.TestCase):
         auth_header['Content-Type'] = 'application/json'
         auth_header['Accept'] = 'application/json'
 
-        response = self.app.get('/myusers/' + postedUserId, headers=auth_header)
+        response = self.app.get('/myusers/', headers=auth_header)
 
         self.assertEqual(response.status_code, 200)
         assert 'application/json' in response.content_type

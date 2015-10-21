@@ -28,8 +28,7 @@ def check_auth(username, password):
         db_password = my_user['password']
         password = str.encode(password)
         db_password = str.encode(db_password)
-        # hashed = bcrypt.hashpw(password, bcrypt.gensalt(BCRYPT_ROUNDS))
-        # print(hashed, db_password)
+
         return bcrypt.hashpw(password, db_password) == db_password
 
 
@@ -49,19 +48,27 @@ def requires_auth(f):
 
 class User(Resource):
     @requires_auth
-    def get(self, user_id=None):
-        if user_id is None:
+    def get(self):
+        username = request.authorization.username
+        if username is None:
             response = jsonify(data=[])
             response.status_code = 404
             return response
         else:
             myuser_collection = app.db.myusers
-            my_user = myuser_collection.find_one({"_id": ObjectId(user_id)})
+            my_user = myuser_collection.find_one({"username": username})
 
             return my_user
 
     def post(self):
         new_user = request.json
+        # new_user = request.authorization.password
+
+        if new_user['username'] == "" or new_user['password'] == "":
+            response = jsonify(data=[])
+            response.status_code = 401
+            return response
+
         password = new_user['password'].encode('utf-8')
         hashed = bcrypt.hashpw(password, bcrypt.gensalt(BCRYPT_ROUNDS)).decode('utf-8')
         new_user['password'] = hashed
@@ -77,7 +84,7 @@ class User(Resource):
             message = {"error": "User already exists"}
             response = jsonify(message)
             response.status_code = 401
-            # print(response)
+
             return response
         else:
             myuser_collection = app.db.myusers
@@ -88,6 +95,11 @@ class User(Resource):
             })
 
             return myuser
+
+        def put(self):
+            # Add implementation for updating a User
+            myuser_collection = app.db.myusers
+            result = myuser_collection.update_one({})
 
 
 class Trip(Resource):
@@ -113,6 +125,7 @@ class Trip(Resource):
 
         return mytrip
 
+    # Add implementation for updating a Post
     def put(self, trip_id=None):
         if trip_id is None:
             response = jsonify(data=[])
@@ -151,4 +164,4 @@ def output_json(data, code, headers=None):
 if __name__ == '__main__':
     # Turn this on in debug mode to get detailled information about request related exceptions: http://flask.pocoo.org/docs/0.10/config/
     app.config['TRAP_BAD_REQUEST_ERRORS'] = True
-    app.run(debug=True)
+    app.run(host="0.0.0.0", debug=True)
