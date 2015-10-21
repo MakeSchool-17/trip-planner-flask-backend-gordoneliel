@@ -106,15 +106,21 @@ class Trip(Resource):
     @requires_auth
     def get(self, trip_id=None):
         if trip_id is None:
+            # [Ben-G] If the trip_id is none, it means that the API Endpoint '/trips/' was called
+            # instead of returning a 404, you should return all trips for the current user in this case
             response = jsonify(data=[])
             response.status_code = 404
             return response
         else:
+            # [Ben-G] In future you need to check if the requested trip belongs to the authenticated
+            # user before returning it
             mytrip_collection = app.db.myobjects
             my_trip = mytrip_collection.find_one({"_id": ObjectId(trip_id)})
             return my_trip
 
     def post(self):
+        # [Ben-G] In future you should associate the trip with the
+        # authenticated user
         new_trip = request.json
         mytrip_collection = app.db.myobjects
         result = mytrip_collection.insert_one(new_trip)
@@ -126,7 +132,12 @@ class Trip(Resource):
         return mytrip
 
     # Add implementation for updating a Post
+    # [Ben-G] This function shouldn't have a default argument for `trip_id`, since the client
+    # always needs to pass a valid ID in order to update a trip
+
     def put(self, trip_id=None):
+        # [Ben-G] In future you need to check if the requested trip belongs to the authenticated
+        # user before updating it
         if trip_id is None:
             response = jsonify(data=[])
             response.status_code = 404
@@ -141,6 +152,7 @@ class Trip(Resource):
 
             return my_trip
 
+# [Ben-G] No possessive determiners! ;) Should be renamed to '/trips/' and '/users/'
 api.add_resource(
     Trip,
     '/mytrips/',
