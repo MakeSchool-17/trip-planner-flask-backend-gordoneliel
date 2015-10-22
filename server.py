@@ -21,7 +21,7 @@ def check_auth(username, password):
         return False
     else:
         #  Get user from database
-        myuser_collection = app.db.myusers
+        myuser_collection = app.db.users
         my_user = myuser_collection.find_one({"username": username})
         if my_user is None:
             return False
@@ -55,7 +55,7 @@ class User(Resource):
             response.status_code = 404
             return response
         else:
-            myuser_collection = app.db.myusers
+            myuser_collection = app.db.users
             my_user = myuser_collection.find_one({"username": username})
 
             return my_user
@@ -74,7 +74,7 @@ class User(Resource):
         new_user['password'] = hashed
 
         # Check for existing user
-        existing_user = app.db.myusers.find_one({
+        existing_user = app.db.users.find_one({
             "username": new_user["username"]
         })
 
@@ -87,7 +87,7 @@ class User(Resource):
 
             return response
         else:
-            myuser_collection = app.db.myusers
+            myuser_collection = app.db.users
             result = myuser_collection.insert_one(new_user)
 
             myuser = myuser_collection.find_one({
@@ -98,8 +98,12 @@ class User(Resource):
 
         def put(self):
             # Add implementation for updating a User
-            myuser_collection = app.db.myusers
-            result = myuser_collection.update_one({})
+            username = request.authorization.username
+            myuser_collection = app.db.users
+            myuser_collection.update_one({"$set": {"username": username}})
+
+            user = myuser_collection.find_one({"username": username})
+            return user
 
 
 class Trip(Resource):
@@ -108,27 +112,43 @@ class Trip(Resource):
         if trip_id is None:
             # [Ben-G] If the trip_id is none, it means that the API Endpoint '/trips/' was called
             # instead of returning a 404, you should return all trips for the current user in this case
-            response = jsonify(data=[])
-            response.status_code = 404
-            return response
+            my_user = request.authorization.username
+
+            mytrip_collection = app.db.trips
+            my_trips = mytrip_collection.find({"username": my_user})
+            print("Trips is: " + str(list(my_trips)))
+            return list(my_trips)
         else:
             # [Ben-G] In future you need to check if the requested trip belongs to the authenticated
             # user before returning it
-            mytrip_collection = app.db.myobjects
+            my_user = request.authorization.username
+            mytrip_collection = app.db.trips
             my_trip = mytrip_collection.find_one({"_id": ObjectId(trip_id)})
-            return my_trip
+            if my_trip['username'] == my_user:
+                print("Trips is: " + str(my_trip))
+                return my_trip
+            else:
+                response = jsonify(data=[])
+                response.status_code = 404
+                return response
 
+    @requires_auth
     def post(self):
         # [Ben-G] In future you should associate the trip with the
         # authenticated user
         new_trip = request.json
-        mytrip_collection = app.db.myobjects
+        my_user = request.authorization.username
+        print("New Trip: " + str(new_trip))
+        mytrip_collection = app.db.trips
+
+        new_trip['username'] = my_user
+
         result = mytrip_collection.insert_one(new_trip)
 
         mytrip = mytrip_collection.find_one({
             "_id": ObjectId(result.inserted_id)
         })
-
+        print("Trips is: " + str(mytrip))
         return mytrip
 
     # Add implementation for updating a Post
@@ -143,26 +163,31 @@ class Trip(Resource):
             response.status_code = 404
             return response
         else:
-
+            username = request.authorization.username
             new_trip = request.json
 
             # Find a trip and modify it
-            trip_collection = app.db.myobjects
-            my_trip = trip_collection.update_one({"_id": ObjectId(trip_id)})
+            trip_collection = app.db.trips
+            trip_collection.update_one({
+                "$set": {"username": username},
+                "$tripDate": {"lastModified": True}
+            })
+
+            my_trip = trip_collection.find_one({"_id": ObjectId(trip_id)})
 
             return my_trip
 
 # [Ben-G] No possessive determiners! ;) Should be renamed to '/trips/' and '/users/'
 api.add_resource(
     Trip,
-    '/mytrips/',
-    '/mytrips/<string:trip_id>'
+    '/trips/',
+    '/trips/<string:trip_id>'
 )
 
 api.add_resource(
     User,
-    '/myusers/',
-    '/myusers/<string:user_id>'
+    '/users/',
+    '/users/<string:user_id>'
 )
 
 
