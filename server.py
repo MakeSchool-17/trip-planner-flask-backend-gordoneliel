@@ -5,6 +5,7 @@ from bson.objectid import ObjectId
 from utils.mongo_json_encoder import JSONEncoder
 import bcrypt
 from functools import wraps
+import datetime
 
 # Basic Setup
 app = Flask(__name__)
@@ -113,10 +114,10 @@ class Trip(Resource):
             # [Ben-G] If the trip_id is none, it means that the API Endpoint '/trips/' was called
             # instead of returning a 404, you should return all trips for the current user in this case
             my_user = request.authorization.username
-
             mytrip_collection = app.db.trips
             my_trips = mytrip_collection.find({"username": my_user})
-            print("Trips is: " + str(list(my_trips)))
+            # trip_list = list(my_trips)
+            # import pdb; pdb.set_trace()
             return list(my_trips)
         else:
             # [Ben-G] In future you need to check if the requested trip belongs to the authenticated
@@ -142,6 +143,7 @@ class Trip(Resource):
         mytrip_collection = app.db.trips
 
         new_trip['username'] = my_user
+        new_trip['createdAt'] = datetime.datetime.utcnow()
 
         result = mytrip_collection.insert_one(new_trip)
 
@@ -155,6 +157,7 @@ class Trip(Resource):
     # [Ben-G] This function shouldn't have a default argument for `trip_id`, since the client
     # always needs to pass a valid ID in order to update a trip
 
+    @requires_auth
     def put(self, trip_id=None):
         # [Ben-G] In future you need to check if the requested trip belongs to the authenticated
         # user before updating it
@@ -196,6 +199,7 @@ api.add_resource(
 def output_json(data, code, headers=None):
     resp = make_response(JSONEncoder().encode(data), code)
     resp.headers.extend(headers or {})
+    # import pdb; pdb.set_trace()
     return resp
 
 if __name__ == '__main__':
